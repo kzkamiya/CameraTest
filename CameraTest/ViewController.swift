@@ -5,6 +5,9 @@
 //  Created by me on 2019/03/18.
 //  Copyright © 2019 Neosystem. All rights reserved.
 //
+// References:
+// https://qiita.com/t_okkan/items/f2ba9b7009b49fc2e30a
+// https://guides.codepath.com/ios/Creating-a-Custom-Camera-View
 
 import UIKit
 import AVFoundation
@@ -30,11 +33,12 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCaptureSession()
-        setupDevice()
-        setupInputOutput()
-        setupPreviewLayer()
-        captureSession.startRunning()
-        styleCaptureButton()
+        if setupDevice() {
+            setupInputOutput()
+            setupPreviewLayer()
+            captureSession.startRunning()
+            styleCaptureButton()
+        }
     }
     
     override func didReceiveMemoryWarning() {
@@ -53,7 +57,87 @@ class ViewController: UIViewController {
         self.photoOutput?.capturePhoto(with: settings, delegate: self as AVCapturePhotoCaptureDelegate)
     }
     
-}
+    var mFirstStart = true
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if (mFirstStart) {
+            mFirstStart = false
+            detectOrientation()
+        }
+    }
+    
+    func detectOrientation() {
+
+//        if UIDevice.current.orientation == UIDeviceOrientation.landscapeLeft {
+//            print("Landscape Left")
+//            // プレビューレイヤの表示の向きを設定
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeRight
+//
+//        }
+//        else if UIDevice.current.orientation == UIDeviceOrientation.landscapeRight{
+//            print("Landscape Right")
+//            // プレビューレイヤの表示の向きを設定
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeLeft
+//        }
+//        else if UIDevice.current.orientation == UIDeviceOrientation.portraitUpsideDown{
+//            print("Portrait Upside Down")
+//            // プレビューレイヤの表示の向きを設定
+////            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portraitUpsideDown
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portraitUpsideDown
+//        }
+//        else if UIDevice.current.orientation == UIDeviceOrientation.portrait {
+//            print("Portrait")
+//            // プレビューレイヤの表示の向きを設定
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
+//        }
+        
+        DispatchQueue.main.async {
+            self.cameraPreviewLayer?.frame = self.view.bounds
+        }
+
+        let orient = UIDevice.current.orientation
+        switch orient {
+        case .portrait:
+            print("Portrait")
+            // プレビューレイヤの表示の向きを設定
+            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
+        case .portraitUpsideDown:
+            print("PortraitUpsideDown")
+            // プレビューレイヤの表示の向きを設定
+            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portraitUpsideDown
+        case .landscapeLeft :
+            print("landscapeLeft")
+            // プレビューレイヤの表示の向きを設定、なぜか逆にしないと逆さまになる。
+            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeRight
+
+        case .landscapeRight :
+            print("landscapeRight")
+            // プレビューレイヤの表示の向きを設定、なぜか逆にしないと逆さまになる。
+            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeLeft
+
+        default:
+            print("Anything But Portrait")
+            // プレビューレイヤの表示の向きを設定
+            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
+        }
+
+        
+        
+//        if UIDevice.current.orientation.isLandscape {
+//            print("Landscape")
+//            // プレビューレイヤの表示の向きを設定
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.landscapeLeft
+//        } else {
+//            print("Portrait")
+//            // プレビューレイヤの表示の向きを設定
+//            self.cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
+//        }
+    }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        detectOrientation()
+    }}
 
 //MARK: AVCapturePhotoCaptureDelegateデリゲートメソッド
 extension ViewController: AVCapturePhotoCaptureDelegate{
@@ -76,7 +160,7 @@ extension ViewController{
     }
     
     // デバイスの設定
-    func setupDevice() {
+    func setupDevice() -> Bool {
         // カメラデバイスのプロパティ設定
         let deviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [AVCaptureDevice.DeviceType.builtInWideAngleCamera], mediaType: AVMediaType.video, position: AVCaptureDevice.Position.unspecified)
         // プロパティの条件を満たしたカメラデバイスの取得
@@ -89,8 +173,13 @@ extension ViewController{
                 innerCamera = device
             }
         }
-        // 起動時のカメラを設定
-        currentDevice = mainCamera
+        if (mainCamera != nil) {
+            // 起動時のカメラを設定
+            currentDevice = mainCamera
+            return true
+        } else {
+            return false
+        }
     }
     
     // 入出力データの設定
